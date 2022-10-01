@@ -44,6 +44,10 @@ class Database {
     get employees() {
         return Array.from(_cache.employees);
     }
+    /** @type {Boolean} */
+    get isClosed() {
+        return !_started;
+    }
 
     set conn(_) {
         preventManualSetting('conn');
@@ -56,6 +60,9 @@ class Database {
     }
     set employees(_) {
         preventManualSetting('employees');
+    }
+    set isClosed(_) {
+        preventManualSetting('isClosed');
     }
 
     /**
@@ -95,6 +102,57 @@ class Database {
         if(found)
             return found;
         return null;
+    }
+
+    /**
+     * Adds a Department to the Database.
+     * 
+     * @param {Department} department the Department to add
+     */
+    async addDepartment(department) {
+        // execute prepared insert statement
+        const [rows] = await this.conn.execute(
+            'INSERT INTO departments_table(name) VALUES (?)',
+            [department.name]
+        );
+        // set department ID to the one sent back by the insert
+        department.id = rows.insertId;
+        // push to cache
+        _cache.departments.push(department);
+    }
+
+    /**
+     * Adds a Role to the Database.
+     * 
+     * @param {Role} role the Role to add
+     */
+    async addRole(role) {
+        // execute prepared insert statement
+        const [rows] = await this.conn.execute(
+            'INSERT INTO roles_table(title, salery, department_id) VALUES (?, ?, ?)',
+            [role.title, role.salary, role.departmentId]
+        );
+        // set role ID to the one sent back by the insert
+        role.id = rows.insertId;
+        // push to cache
+        _cache.roles.push(role);
+    }
+
+    /**
+     * Adds a Employee to the Database.
+     * 
+     * @param {Employee} employee the Employee to add
+     */
+    async addEmployee(employee) {
+        // execute prepared insert statement
+        const [rows] = await this.conn.execute(
+            'INSERT INTO employees_table(first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)',
+            [employee.firstName, employee.lastName, employee.roleId, employee.managerId]
+        );
+        // set employee ID to the one sent back by the insert
+        employee.id = rows.insertId;
+        // push to cache
+        _cache.employees.push(employee);
     }
 
     async refreshCaches() {
@@ -152,26 +210,26 @@ class Database {
         _cache.employees = temp;
         return this.employees;
     }
+
+    close() {
+        this.conn.end();
+        _connection = null;
+        _started = false;
+    }
 }
 
 async function start() {
-    if(_started)
-        throw new Error('Database has already been started!');
-
-    _connection = await mysql.createConnection(connectOptions);
-
-    const database = new Database();
-    const script = await readResource('db', 'schema.sql');
-
-    await database.conn.query(`CREATE DATABASE IF NOT EXISTS ${databaseName};`);
-    await database.conn.query(`USE ${databaseName};`);
-    await database.conn.query(script);
-
-    _started = true;
-
-    await database.refreshCaches();
-
-    return database;
+    if(_started)                                                                    // if the database has already started
+        throw new Error('Database has already been started!');                          // throw an error, we shouldn't start a database again
+    _connection = await mysql.createConnection(connectOptions);                     // create the internal connection
+    const database = new Database();                                                // initialize a new Database object
+    const script = await readResource('db', 'schema.sql');                          // load the schema script
+    await database.conn.query(`CREATE DATABASE IF NOT EXISTS ${databaseName};`);    // create the database
+    await database.conn.query(`USE ${databaseName};`);                              // set the connection to use the new database
+    await database.conn.query(script);                                              // run the schema script
+    _started = true;                                                                // set started to true
+    await database.refreshCaches();                                                 // initial cache refresh to populate it
+    return database;                                                                // return the new Database
 }
 
 module.exports = { start };
