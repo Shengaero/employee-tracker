@@ -1,0 +1,27 @@
+{
+  "name": "employee-tracker",
+  "version": "0.1.0",
+  "description": "Tracks Employee information via command line",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shengaero/employee-tracker.git"
+  },
+  "keywords": [
+    "employee",
+    "tracker"
+  ],
+  "author": "Kaidan Gustave",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Shengaero/employee-tracker/issues"
+  },
+  "homepage": "https://github.com/Shengaero/employee-tracker#readme",
+  "dependencies": {
+    "inquirer": "^9.1.2",
+    "mysql2": "^2.3.3"
+  }
+}
