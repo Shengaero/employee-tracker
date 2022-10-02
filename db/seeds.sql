@@ -1,15 +1,16 @@
 USE employees_db;
 
-INSERT INTO departments_table(name) VALUES ("employee-tracker-project");
+INSERT INTO departments_table(name)
+    VALUES  ("Software");
 
 INSERT INTO roles_table(title, salery, department_id) 
-    SELECT "employee-tracker", 0.00, id
-    FROM departments_table WHERE name = "employee-tracker-project";
-
-INSERT INTO employees_table(first_name, last_name, role_id)
-    SELECT "John", "Smith", id
-    FROM roles_table WHERE title = "employee-tracker";
+    VALUES  ("Project Manager", 100000, 1),
+            ("Developer",       80000,  1),
+            ("Intern",          0,      1);
 
 INSERT INTO employees_table(first_name, last_name, role_id, manager_id)
-    SELECT "Kaidan", "Gustave", id, 1
-    FROM roles_table WHERE title = "employee-tracker";
+    VALUES  ("John",    "Smith",    1,  NULL),
+            ("Jane",    "Goodman",  2,  1),
+            ("Will",    "Park",     2,  1),
+            ("Lisa",    "Johnson",  2,  1),
+            ("Chris",   "Walker",   3,  1);
