@@ -20,8 +20,8 @@ const _cache = {
 const databaseName = 'employees_db';
 const connectOptions = {
     host: 'localhost',
-    user: process.env.MYSQL_USER | 'root',
-    password: process.env.MYSQL_PASS | 'root',
+    user: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASS || 'root',
     multipleStatements: true
 };
 
