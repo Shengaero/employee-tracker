@@ -74,10 +74,10 @@ class Database {
      * @returns {Department|null} the Department found, or `null` if none was found
      */
     getDepartmentById(id) {
-        const found = _cache.departments.find(department => department.id === parseInt(id));
-        if(found)
-            return found;
-        return null;
+        const found = _cache.departments.find(department => department.id === parseInt(id));    // try to find a department with a matching ID
+        if(found)                                                                               // if one was found
+            return found;                                                                           // return it
+        return null;                                                                            // otherwise return null
     }
 
     /**
@@ -87,10 +87,10 @@ class Database {
      * @returns {Role|null} the Role found, or `null` if none was found
      */
     getRoleById(id) {
-        const found = _cache.roles.find(role => role.id === parseInt(id));
-        if(found)
-            return found;
-        return null;
+        const found = _cache.roles.find(role => role.id === parseInt(id));      // try to find a role with a matching ID
+        if(found)                                                               // if one was found
+            return found;                                                           // return it
+        return null;                                                            // otherwise return null
     }
 
     /**
@@ -100,10 +100,10 @@ class Database {
      * @returns {Employee|null} the Employee found, or `null` if none was found
      */
     getEmployeeById(id) {
-        const found = _cache.employees.find(employee => employee.id === parseInt(id));
-        if(found)
-            return found;
-        return null;
+        const found = _cache.employees.find(employee => employee.id === parseInt(id));      // try to find an employee with a matching ID
+        if(found)                                                                           // if one was found
+            return found;                                                                       // return it
+        return null;                                                                        // otherwise return null
     }
 
     /**
@@ -180,59 +180,52 @@ class Database {
     }
 
     async refreshDepartmentsCache() {
-        const [rows] = await this.conn.query('SELECT * FROM departments_table;');
-
-        _cache.departments = rows.map(row => {
-            const { id, name } = row;
-            const department = new Department(parseInt(id), name);
-            return department;
+        const [rows] = await this.conn.query('SELECT * FROM departments_table;');       // retrieve all rows from departments table in database
+        _cache.departments = rows.map(row => {                                          // replace the existing cache by...
+            const { id, name } = row;                                                       // desconstructing the row
+            const department = new Department(parseInt(id), name);                          // creating a new Department object using the parts
+            return department;                                                              // return the Department
         });
-
-        return this.departments;
+        return this.departments;                                                        // return the database departments
     }
 
     async refreshRolesCache() {
-        const [rows] = await this.conn.query('SELECT * FROM roles_table;');
-
-        _cache.roles = rows.map(row => {
-            const { id, title, salery, department_id } = row;
-            const department = this.departments.find(department => department.id === parseInt(department_id));
-            const role = new Role(parseInt(id), title, parseFloat(salery), department);
-            return role;
+        const [rows] = await this.conn.query('SELECT * FROM roles_table;');                                     // retrieve all rows from the roles table in the database
+        _cache.roles = rows.map(row => {                                                                        // replace the existing cache by...
+            const { id, title, salery, department_id } = row;                                                       // deconstructing the row
+            const department = this.departments.find(department => department.id === parseInt(department_id));      // searching the department cache for a matching Department object
+            const role = new Role(parseInt(id), title, parseFloat(salery), department);                             // creating a new Role object using the parts
+            return role;                                                                                            // return the Role
         });
-
-        return this.roles;
+        return this.roles;                                                                                      // return the database roles
     }
 
     async refreshEmployeesCache() {
-        const [rows] = await this.conn.query('SELECT * FROM employees_table;');
-
-        const temp = rows.map(row => {
-            const { id, first_name, last_name, role_id, manager_id } = row;
-            const role = this.roles.find(role => role.id === parseInt(role_id));
-            const employee = new Employee(id, first_name, last_name, role, null);
-            return { employee: employee, managerId: parseInt(manager_id) };
+        const [rows] = await this.conn.query('SELECT * FROM employees_table;');     // retrieve all rows from the employees table in the database
+        const temp = rows.map(row => {                                              // create a temporary working cache by...
+            const { id, first_name, last_name, role_id, manager_id } = row;             // deconstructing the row
+            const role = this.roles.find(role => role.id === parseInt(role_id));        // searching the role cache for a matching Role object
+            const employee = new Employee(id, first_name, last_name, role, null);       // creating a new Employee object using the parts
+            return { employee: employee, managerId: parseInt(manager_id) };             // return a pairing of the new Employee object and the manager ID
         });
-
-        for(let { employee, managerId } of temp) {
-            if(managerId === null)
-                continue;
-            for(let pair of temp) {
-                if(pair.employee.id === managerId) {
-                    employee.manager = pair.employee;
-                    break;
+        for(let { employee, managerId } of temp) {                                  // iterate over all the pairs
+            if(managerId === null)                                                      // if the manager ID is null
+                continue;                                                                   // skip the rest of the loop
+            for(let pair of temp) {                                                     // otherwise, for each pair
+                if(pair.employee.id === managerId) {                                        // if the pair's employee ID equals the manager ID
+                    employee.manager = pair.employee;                                           // set the manager of the employee to the pair's employee
+                    break;                                                                      // break out of this loop
                 }
             }
         }
-
-        _cache.employees = temp.map(pair => pair.employee);
-        return this.employees;
+        _cache.employees = temp.map(pair => pair.employee);                         // map the employees from the pairs and replace the existing cache
+        return this.employees;                                                      // return the database employees
     }
 
     close() {
-        this.conn.end();
-        _connection = null;
-        _started = false;
+        this.conn.end();        // close the database connection
+        _connection = null;     // set the global reference to the connection to null
+        _started = false;       // set the global started variable to false incase we'd need to ever restart the database
     }
 }
 
