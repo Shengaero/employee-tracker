@@ -5,6 +5,9 @@ const Role = require('../lib/Role');
 const database = require('./database').getInstance();
 require('console.table');
 
+const mapEmployeesForMenu = (employee) =>
+    new Option(`${employee.firstName} ${employee.lastName}`, employee);
+
 class Option {
     constructor(name, value) {
         this.name = name;
@@ -31,13 +34,11 @@ async function viewAllEmployees() {
 };
 
 async function addDepartment() {
-    const { name } = await inquirer.prompt([
-        {
-            type: 'input',
-            name: 'name',
-            message: 'Enter the new department name:'
-        }
-    ]);
+    const { name } = await inquirer.prompt({
+        type: 'input',
+        name: 'name',
+        message: 'Enter the new department name:'
+    });
     const department = new Department(-1, name);
     await database.addDepartment(department);
     return false;
@@ -91,9 +92,7 @@ async function addEmployee() {
             name: 'manager',
             message: "Select the new employee's manager:",
             choices: [
-                ...database.employees.map(employee =>
-                    new Option(`${employee.firstName} ${employee.lastName}`, employee)
-                ),
+                ...database.employees.map(mapEmployeesForMenu),
                 new Option('None', null)
             ]
         }
@@ -101,6 +100,26 @@ async function addEmployee() {
 
     const employee = new Employee(-1, firstName, lastName, role, manager);
     await database.addEmployee(employee);
+    return false;
+}
+
+async function updateEmployeeRole() {
+    const { employee, role } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'employee',
+            message: 'Select an employee to update:',
+            choices: database.employees.map(mapEmployeesForMenu)
+        },
+        {
+            type: 'list',
+            name: 'role',
+            message: 'Select a role to give the employee',
+            choices: database.roles.map(role => new Option(role.title, role)),
+        }
+    ]);
+
+    await database.updateEmployeeRole(employee, role);
     return false;
 }
 
@@ -115,10 +134,7 @@ const prompt = {
         new Option('Add Department', addDepartment),
         new Option('Add Role', addRole),
         new Option('Add Employee', addEmployee),
-        {
-            name: 'Update Employee Role',
-            value: null // TODO implement Update an Employee Role
-        },
+        new Option('Update Employee Role', updateEmployeeRole),
         new Option('Close Database', () => true)
     ],
     loop: false

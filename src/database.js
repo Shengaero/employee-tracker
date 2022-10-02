@@ -112,7 +112,7 @@ class Database {
     async addDepartment(department) {
         // execute prepared insert statement
         const [rows] = await this.conn.execute(
-            'INSERT INTO departments_table(name) VALUES (?)',
+            'INSERT INTO departments_table(name) VALUES (?);',
             [department.name]
         );
         // set department ID to the one sent back by the insert
@@ -129,7 +129,7 @@ class Database {
     async addRole(role) {
         // execute prepared insert statement
         const [rows] = await this.conn.execute(
-            'INSERT INTO roles_table(title, salery, department_id) VALUES (?, ?, ?)',
+            'INSERT INTO roles_table(title, salery, department_id) VALUES (?, ?, ?);',
             [role.title, role.salary, role.departmentId]
         );
         // set role ID to the one sent back by the insert
@@ -146,13 +146,29 @@ class Database {
     async addEmployee(employee) {
         // execute prepared insert statement
         const [rows] = await this.conn.execute(
-            'INSERT INTO employees_table(first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)',
+            'INSERT INTO employees_table(first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?);',
             [employee.firstName, employee.lastName, employee.roleId, employee.managerId]
         );
         // set employee ID to the one sent back by the insert
         employee.id = rows.insertId;
         // push to cache
         _cache.employees.push(employee);
+    }
+
+    /**
+     * Updates an Employee's Role.
+     * 
+     * @param {Employee} employee the Employee to update
+     * @param {Role} role the Role to give the Employee
+     */
+    async updateEmployeeRole(employee, role) {
+        // execute prepared update statement
+        await this.conn.execute(
+            'UPDATE employees_table SET role_id = ? WHERE id = ?;',
+            [role.id, employee.id]
+        );
+        // set the employee's role
+        employee.role = role;
     }
 
     async refreshCaches() {
