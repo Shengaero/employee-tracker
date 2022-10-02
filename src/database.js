@@ -207,7 +207,7 @@ class Database {
             }
         }
 
-        _cache.employees = temp;
+        _cache.employees = temp.map(pair => pair.employee);
         return this.employees;
     }
 
@@ -232,4 +232,9 @@ async function start() {
     return database;                                                                // return the new Database
 }
 
-module.exports = { start };
+module.exports = {
+    start,
+    getInstance() {
+        return new Database();
+    }
+};
