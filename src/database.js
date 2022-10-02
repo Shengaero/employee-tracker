@@ -1,8 +1,10 @@
 const mysql = require('mysql2/promise');
-const { readResource } = require('./util');
+
 const Department = require('../lib/Department');
 const Employee = require('../lib/Employee');
 const Role = require('../lib/Role');
+
+const { readResource } = require('./util');
 
 let _started = false;
 let _connection = null;
@@ -18,8 +20,8 @@ const _cache = {
 const databaseName = 'employees_db';
 const connectOptions = {
     host: 'localhost',
-    user: 'root',
-    password: 'root',
+    user: process.env.MYSQL_USER | 'root',
+    password: process.env.MYSQL_PASS | 'root',
     multipleStatements: true
 };
 

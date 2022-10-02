@@ -1,8 +1,10 @@
 const inquirer = require('inquirer');
+const database = require('./database').getInstance();
+
 const Department = require('../lib/Department');
 const Employee = require('../lib/Employee');
 const Role = require('../lib/Role');
-const database = require('./database').getInstance();
+
 require('console.table');
 
 const mapEmployeesForMenu = (employee) =>
@@ -19,19 +21,19 @@ async function viewAllDepartments() {
     const departments = database.departments;
     console.table('Departments', departments);
     return false;
-};
+}
 
 async function viewAllRoles() {
     const roles = database.roles;
     console.table('Roles', roles.map(roles => roles.toTableObject()));
     return false;
-};
+}
 
 async function viewAllEmployees() {
     const employees = database.employees;
     console.table('Employees', employees.map(employee => employee.toTableObject()));
     return false;
-};
+}
 
 async function addDepartment() {
     const { name } = await inquirer.prompt({
@@ -42,7 +44,7 @@ async function addDepartment() {
     const department = new Department(-1, name);
     await database.addDepartment(department);
     return false;
-};
+}
 
 async function addRole() {
     const { title, salary, department } = await inquirer.prompt([
