@@ -6,8 +6,11 @@ const Role = require('../lib/Role');
 
 const { readResource } = require('./util');
 
+/** Private variable to tell if the database connection has been started */
 let _started = false;
+/** Private variable to hold database connection, or null if it's stopped or hasn't been started at all */
 let _connection = null;
+/** Private variable to hold in-runtime cache, good for reducing the number of queries to our database */
 const _cache = {
     /** @type {Array<Department>} */
     departments: [],
@@ -28,6 +31,40 @@ const connectOptions = {
 const preventManualSetting = (prop) => {
     throw new Error(`"${prop}" property cannot be set!`);
 };
+
+function deleteDepartmentFromCache(department) {
+    _cache.departments.splice(_cache.departments.findIndex(d => d.id === department), 1);
+}
+
+function deleteRoleFromCache(role) {
+    _cache.roles = _cache.roles.filter(r => r !== role);
+}
+
+function deleteRolesFromCache(roles) {
+    _cache.roles = _cache.roles.filter(r => !roles.includes(r));
+}
+
+function deleteEmployeeFromCache(deletedEmployee) {
+    _cache.employees = _cache.employees.filter(e => e !== deletedEmployee); // reset the cache to only include non-deleted employees
+    for(let cacheEmployee of _cache.employees) {                            // for each cache employee
+        if(cacheEmployee.manager !== null) {                                    // if the cache employee has a manager
+            if(deletedEmployee === cacheEmployee.manager) {                         // if the deleted employee is the cache employee's manager
+                cacheEmployee.manager = null;                                           // set the cache employee manager to null
+            }
+        }
+    }
+}
+
+function deleteEmployeesFromCache(deletedEmployees) {
+    _cache.employees = _cache.employees.filter(e => !deletedEmployees.includes(e)); // reset out cache to only include non-deleted employees
+    for(let cacheEmployee of _cache.employees) {                                    // for each cache employee
+        if(cacheEmployee.manager !== null) {                                            // if the cache employee has a manager
+            if(deletedEmployees.includes(cacheEmployee.manager)) {                          // if the deleted employees contains the manager of the cache employee
+                cacheEmployee.manager = null;                                                   // set the cache employee manager to null
+            }
+        }
+    }
+}
 
 class Database {
     /** @type {mysql.Connection} */
@@ -107,20 +144,77 @@ class Database {
     }
 
     /**
+     * Gets Roles by a Department.
+     * 
+     * @param {Department} department the Department to search for
+     * @returns {Array<Role>} the Roles found
+     */
+    getRolesByDepartment(department) {
+        return this.getRolesByDepartmentId(department.id);
+    }
+
+    /**
+     * Gets Roles by a Department ID.
+     * 
+     * @param {Number} id the Department ID to search for
+     * @returns {Array<Role>} the Roles found
+     */
+    getRolesByDepartmentId(id) {
+        return _cache.roles.filter(role => role.departmentId === id);
+    }
+
+    /**
+     * Gets Employees by a Department.
+     * 
+     * @param {Department} department the Department to search for
+     * @returns {Array<Employee>} the Employees found
+     */
+    getEmployeesByDepartment(department) {
+        return this.getEmployeesByDepartmentId(department.id);
+    }
+
+    /**
+     * Gets Employees by a Department ID.
+     * 
+     * @param {Number} id the Department ID to search for
+     * @returns {Array<Employee>} the Employees found
+     */
+    getEmployeesByDepartmentId(id) {
+        return _cache.employees.filter(employee => employee.role.departmentId === id);
+    }
+
+    /**
+     * Gets Employees by a Role.
+     * 
+     * @param {Role} role the Role to search for
+     * @returns {Array<Employee>} the Employees found
+     */
+    getEmployeesByRole(role) {
+        return this.getEmployeesByRoleId(role.id);
+    }
+
+    /**
+     * Gets Employees by a Role ID.
+     * 
+     * @param {Number} id the Role ID to search for
+     * @returns {Array<Employee>} the Employees found
+     */
+    getEmployeesByRoleId(id) {
+        return _cache.employees.filter(employee => employee.role.id === id);
+    }
+
+    /**
      * Adds a Department to the Database.
      * 
      * @param {Department} department the Department to add
      */
     async addDepartment(department) {
-        // execute prepared insert statement
-        const [rows] = await this.conn.execute(
+        const [rows] = await this.conn.execute(                     // execute prepared insert statement
             'INSERT INTO departments_table(name) VALUES (?);',
             [department.name]
         );
-        // set department ID to the one sent back by the insert
-        department.id = rows.insertId;
-        // push to cache
-        _cache.departments.push(department);
+        department.id = rows.insertId;                              // set department ID to the one sent back by the insert
+        _cache.departments.push(department);                        // push to cache
     }
 
     /**
@@ -129,15 +223,12 @@ class Database {
      * @param {Role} role the Role to add
      */
     async addRole(role) {
-        // execute prepared insert statement
-        const [rows] = await this.conn.execute(
+        const [rows] = await this.conn.execute(                                             // execute prepared insert statement
             'INSERT INTO roles_table(title, salery, department_id) VALUES (?, ?, ?);',
             [role.title, role.salary, role.departmentId]
         );
-        // set role ID to the one sent back by the insert
-        role.id = rows.insertId;
-        // push to cache
-        _cache.roles.push(role);
+        role.id = rows.insertId;                                                            // set role ID to the one sent back by the insert
+        _cache.roles.push(role);                                                            // push to cache
     }
 
     /**
@@ -146,15 +237,12 @@ class Database {
      * @param {Employee} employee the Employee to add
      */
     async addEmployee(employee) {
-        // execute prepared insert statement
-        const [rows] = await this.conn.execute(
+        const [rows] = await this.conn.execute(                                                                 // execute prepared insert statement
             'INSERT INTO employees_table(first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?);',
             [employee.firstName, employee.lastName, employee.roleId, employee.managerId]
         );
-        // set employee ID to the one sent back by the insert
-        employee.id = rows.insertId;
-        // push to cache
-        _cache.employees.push(employee);
+        employee.id = rows.insertId;                                                                            // set employee ID to the one sent back by the insert
+        _cache.employees.push(employee);                                                                        // push to cache
     }
 
     /**
@@ -164,13 +252,88 @@ class Database {
      * @param {Role} role the Role to give the Employee
      */
     async updateEmployeeRole(employee, role) {
-        // execute prepared update statement
-        await this.conn.execute(
+        await this.conn.execute(                                        // execute prepared update statement
             'UPDATE employees_table SET role_id = ? WHERE id = ?;',
             [role.id, employee.id]
         );
-        // set the employee's role
-        employee.role = role;
+        employee.role = role;                                           // set the employee's role
+    }
+
+    /**
+     * Updates an Employee's manager.
+     * 
+     * @param {Employee} employee the Employee to update
+     * @param {Employee|null} manager the new manager, or null if it should be removed
+     */
+    async updateEmployeeManager(employee, manager) {
+        await this.conn.execute(                                            // execute prepared update statement
+            'UPDATE employees_table SET manager_id = ? WHERE id = ?;',
+            [manager ? manager.id : null, employee.id]
+        );
+        employee.manager = manager;                                         // set the employee's manager
+    }
+
+    /**
+     * Deletes a Department from the database.
+     * 
+     * @param {Department} department the department to delete
+     */
+    async deleteDepartment(department) {
+        await this.conn.execute('DELETE FROM departments_table WHERE id = ?;', [id]);       // execute prepared delete statement
+        const roles = this.getRolesByDepartmentId(id);                                      // get the roles associated with the department
+        const employees = this.getEmployeesByDepartmentId(id);                              // get the employees associated with the department
+        deleteDepartmentFromCache(department);                                              // delete the department from the cache
+        deleteRolesFromCache(roles);                                                        // delete the roles associated with the department from the cache
+        deleteEmployeesFromCache(employees);                                                // delete the employees associated with the department from the cache
+    }
+
+    /**
+     * Deletes a Role from the database.
+     * 
+     * @param {Role} role the role to delete
+     */
+    async deleteRole(role) {
+        await this.conn.execute('DELETE FROM roles_table WHERE id = ?;', [role.id]);    // execute prepared delete statement
+        const employees = this.getEmployeesByRole(role);                                // get the employees associated with the role
+        deleteRoleFromCache(role);                                                      // delete the role from the cache
+        deleteEmployeesFromCache(employees);                                            // delete the employees associated with the role from the cache
+    }
+
+    /**
+     * Deletes an Employee from the database.
+     * 
+     * @param {Employee} employee the employee to delete
+     */
+    async deleteEmployee(employee) {
+        await this.conn.execute('DELETE FROM employees_table WHERE id = ?;', [employee.id]);    // execute prepared delete statement
+        deleteEmployeeFromCache(employee);                                                      // delete the employee from the cache
+    }
+
+    /**
+     * Deletes a Department from the database.
+     * 
+     * @param {Number} id the department ID to delete
+     */
+    async deleteDepartmentById(id) {
+        await this.deleteDepartment(this.getDepartmentById(id));    // defer to deleteDepartment
+    }
+
+    /**
+     * Deletes a Role from the database.
+     * 
+     * @param {Number} id the role ID to delete
+     */
+    async deleteRoleById(id) {
+        await this.deleteRole(this.getRoleById(id));    // defer to deleteRole
+    }
+
+    /**
+     * Deletes an Employee from the database.
+     * 
+     * @param {Number} id the employee ID to delete
+     */
+    async deleteEmployeeById(id) {
+        await this.deleteEmployee(this.getEmployeeById(id));    // defer to deleteEmployee
     }
 
     async refreshCaches() {
