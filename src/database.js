@@ -279,12 +279,12 @@ class Database {
      * @param {Department} department the department to delete
      */
     async deleteDepartment(department) {
-        await this.conn.execute('DELETE FROM departments_table WHERE id = ?;', [id]);       // execute prepared delete statement
-        const roles = this.getRolesByDepartmentId(id);                                      // get the roles associated with the department
-        const employees = this.getEmployeesByDepartmentId(id);                              // get the employees associated with the department
-        deleteDepartmentFromCache(department);                                              // delete the department from the cache
-        deleteRolesFromCache(roles);                                                        // delete the roles associated with the department from the cache
-        deleteEmployeesFromCache(employees);                                                // delete the employees associated with the department from the cache
+        await this.conn.execute('DELETE FROM departments_table WHERE id = ?;', [department.id]);    // execute prepared delete statement
+        const roles = this.getRolesByDepartment(department);                                        // get the roles associated with the department
+        const employees = this.getEmployeesByDepartment(department);                                // get the employees associated with the department
+        deleteDepartmentFromCache(department);                                                      // delete the department from the cache
+        deleteRolesFromCache(roles);                                                                // delete the roles associated with the department from the cache
+        deleteEmployeesFromCache(employees);                                                        // delete the employees associated with the department from the cache
     }
 
     /**
