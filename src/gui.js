@@ -177,7 +177,7 @@ async function updateEmployeeManager() {
         {
             type: 'list',
             name: 'manager',
-            message: `Select a new manager for ${employee.firstName} ${employee.lastName}:`,
+            message: (answers) => `Select a new manager for ${answers.employee.firstName} ${answers.employee.lastName}:`,
             choices: (answers) => [
                 ...database.employees.filter(e => e !== answers.employee).map(mapEmployeesForMenu),
                 new Option('None', null)
