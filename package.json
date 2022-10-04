@@ -4,6 +4,7 @@
   "description": "Tracks Employee information via command line",
   "main": "index.js",
   "scripts": {
+    "app": "node index.js",
     "test": "jest --passWithNoTests --verbose --testMatch \"**/test/**/*.test.js\""
   },
   "repository": {
